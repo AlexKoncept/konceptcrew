@@ -4,6 +4,15 @@
   <p><strong>Votre Équipe d'Élite IA / Your Elite AI Crew</strong></p>
 </div>
 
+<p align="center">
+   <img src="https://img.shields.io/badge/Node-18%2B-brightgreen.svg" alt="Node.js" />
+   <img src="https://img.shields.io/badge/TypeScript-5.8-blue.svg" alt="TypeScript" />
+   <img src="https://img.shields.io/badge/React-19.0.1-61DAFB.svg" alt="React" />
+   <img src="https://img.shields.io/badge/Vite-6.2.3-blueviolet.svg" alt="Vite" />
+   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License MIT" />
+   <img src="https://img.shields.io/badge/Netlify-deploy-blue.svg" alt="Netlify" />
+</p>
+
 
 > **« Your AI Crew. Your Way. »**  
 > Une plateforme d'orchestration de spécialistes IA ultra-personnalisés, dotée d'une interface utilisateur d'élite inspirée des meilleurs standards de design modernes. Conçue pour offrir des sessions de travail fluides, immersives et locales-premières.
