@@ -1,6 +1,5 @@
 <div align="center">
   <img src="./logo.png" alt="KonceptCrew Logo" width="240" style="border-radius: 24px;" />
-  <h1>🔮 KonceptCrew</h1>
   <p><strong>Votre Équipe d'Élite IA / Your Elite AI Crew</strong></p>
 </div>
 
