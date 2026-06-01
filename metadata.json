@@ -1,0 +1,6 @@
+{
+  "name": "KonceptCrew",
+  "description": "Générateur de Spécialistes par IA: créez, personnalisez et dialoguez avec vos experts d'équipes en mode local-first, multimodal, voix et recherche web.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
