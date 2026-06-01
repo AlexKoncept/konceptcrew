@@ -74,28 +74,20 @@ const translations = {
     btnView: "Ouvrir",
     instPre: "GUIDE TECHNIQUE",
     instTitle: "Installation & Mise en ligne",
-    localStep1Title: "Récupérer le Code Source",
-    localStep1Desc: "Téléchargez le projet au format ZIP ou clonez le dépôt GitHub sur votre ordinateur. Naviguez dans le dossier extrait.",
+    localStep1Title: "Cloner le dépôt GitHub",
+    localStep1Desc: "Récupérez le projet complet depuis le dépôt officiel : https://github.com/AlexKoncept/konceptcrew . Naviguez dans le dossier extrait.",
     localStep2Title: "Installer les Dépendances",
     localStep2Desc: "Ouvrez votre terminal et exécutez la commande suivante pour télécharger les packages requis (React, Express, Google GenAI, etc.).",
     localStep3Title: "Configuration de la clé API",
     localStep3Desc: "Créez un fichier nommé .env à la racine du projet et placez-y votre clé d'API personnelle obtenue sur Google AI Studio.",
     localStep4Title: "Lancer en mode Développement",
     localStep4Desc: "Démarrez le serveur local pour exécuter l'interface et le pont d'API Express sécurisé de manière simultanée. L'application est disponible sur le port indiqué.",
-    cloudStep1Title: "Pourquoi un hébergement Node.js ?",
-    cloudStep1Desc: "KonceptCrew n'est pas un simple site statique client. Il comprend un serveur de sécurité (server.ts) pour protéger vos identifiants d'API Google. Les hébergements traditionnels statiques ne suffiront pas : Render.com ou Railway.app sont idéaux.",
-    cloudStep2Title: "Exportation GitHub",
-    cloudStep2Desc: "Dans Google AI Studio, cliquez sur le bouton de configuration ou d'exportation en haut à droite, puis sélectionnez 'Export to GitHub' ou importez le ZIP sur votre compte GitHub.",
-    cloudStep3Title: "Déploiement sur Render (Recommandé)",
-    cloudStep3Desc: "Créez un compte sur Render.com, créez un nouveau 'Web Service' et connectez le dépôt GitHub de KonceptCrew. Définissez la commande de build sur 'npm run build' et start sur 'npm run start'.",
-    cloudStep4Title: "Variables d'Environnement",
-    cloudStep4Desc: "Dans les paramètres ('Environment') du service Render, ajoutez la clé obligatoire pour permettre aux experts IA de répondre en toute sécurité.",
-    hybridStep1Title: "Concept du déploiement scindé",
-    hybridStep1Desc: "Vous pouvez préférer utiliser Netlify pour la rapidité de chargement de l'interface en l'hébergeant comme une SPA (Single Page Application) et déléguer la partie calcul IA à un serveur tiers ou des serveurs sans état (Serverless).",
-    hybridStep2Title: "Déployer le Frontend sur Netlify",
-    hybridStep2Desc: "Connectez votre projet GitHub sur Netlify. Réglez la commande de compilation sur 'npm run build' et le dossier de publication sur le répertoire de sortie de Vite : 'dist/'.",
-    hybridStep3Title: "Configuration du Serveur API d'Appui",
-    hybridStep3Desc: "Pour que l'IA fonctionne, vous devez héberger la partie Express séparément (ex. sur Render) et mettre à jour l'URL cible de vos appels API dans le code React client (ex: remplacer /api par l'URL de votre serveur Render).",
+    onlineStep1Title: "Version En Ligne via Netlify",
+    onlineStep1Desc: "La plateforme est également hébergée pour être accessible directement en ligne. La partie statique frontale est propulsée par Netlify.",
+    onlineStep2Title: "Comment utiliser la version en ligne ?",
+    onlineStep2Desc: "Ouvrez le lien ci-dessous, accédez au menu Configuration et entrez votre propre clé API Google. Tout est exécuté localement dans votre navigateur ou via proxy pour votre sécurité.",
+    onlineStep3Title: "Lien Officiel",
+    onlineStep3Desc: "Accédez à la démo en ligne à l'adresse suivante : https://konceptcrew-byalexkoncept.netlify.app/",
     futureLabel: "🔮 LE FUTUR : BIBLIOTHÈQUE VIVANTE",
     futureTitle: "L'évolution vers une communauté d'élite partagée",
     futureDesc: "KonceptCrew a vocation à ne pas rester fermé. Dans les prochaines versions, nous pourrions construire un écosystème d'entraide beaucoup plus communautaire et centralisé entre les utilisateurs :",
@@ -160,28 +152,20 @@ const translations = {
     btnView: "Open",
     instPre: "TECHNICAL GUIDE",
     instTitle: "Installation & Hosting",
-    localStep1Title: "Retrieve Source Code",
-    localStep1Desc: "Download the project as a ZIP archive or clone the GitHub repository. Navigate into the project folder.",
+    localStep1Title: "Clone GitHub Repository",
+    localStep1Desc: "Retrieve the complete source code from the official repository: https://github.com/AlexKoncept/konceptcrew . Navigate into the folder.",
     localStep2Title: "Install Project Dependencies",
     localStep2Desc: "Open your console and run the command to download all required packages (React, Express, Google GenAI, etc.).",
     localStep3Title: "Set up the API Key",
     localStep3Desc: "Create a file named .env at the root of the project and insert your personal API key obtained from Google AI Studio.",
     localStep4Title: "Run Development Server",
     localStep4Desc: "Start the local development server to run both the frontend interface and the secure Express API bridge. Accessible via the output port.",
-    cloudStep1Title: "Why Node.js Hosting?",
-    cloudStep1Desc: "KonceptCrew is not a simple static client site. It includes a backend security server (server.ts) to protect your Google API keys. Classic static hostings won't work: Render.com or Railway.app are recommended.",
-    cloudStep2Title: "Export to GitHub",
-    cloudStep2Desc: "In Google AI Studio, click the parameters button on the top-right, choose 'Export to GitHub' or upload the ZIP archive to your GitHub account.",
-    cloudStep3Title: "Deploy on Render (Recommended)",
-    cloudStep3Desc: "Register a free account on Render.com, create a new 'Web Service', and link the KonceptCrew repository. Set Build command to 'npm run build' and Start command to 'npm run start'.",
-    cloudStep4Title: "Environment Variables",
-    cloudStep4Desc: "In the service's 'Environment' settings panel, add the mandatory API key value to enable secured agent communication.",
-    hybridStep1Title: "Split Architecture Concept",
-    hybridStep1Desc: "You can host the React frontend app statically on Netlify for ultimate page load speeds, and delegate the AI operations to a separated server or stateless functions.",
-    hybridStep2Title: "Host Frontend on Netlify",
-    hybridStep2Desc: "Link your GitHub repository to Netlify. Set the build command to 'npm run build' and specify the output folder to Vite's output: 'dist/'.",
-    hybridStep3Title: "Configure API Support Server",
-    hybridStep3Desc: "For the AI features to respond, host the Express app separately (e.g. on Render) and update the base target URL in your React client queries (e.g. swap /api to your Render server URL).",
+    onlineStep1Title: "Netlify Online Version",
+    onlineStep1Desc: "The platform is also hosted for direct online access. The static frontend is powered by Netlify for ultimate speed.",
+    onlineStep2Title: "How to use the online version?",
+    onlineStep2Desc: "Open the official link, access the Configuration menu and enter your own Google API key. Everything runs locally in your browser or through secure proxies.",
+    onlineStep3Title: "Official Link",
+    onlineStep3Desc: "Access the online platform: https://konceptcrew-byalexkoncept.netlify.app/",
     futureLabel: "🔮 THE ROADMAP",
     futureTitle: "Community Sharing & Collaborations",
     futureDesc: "KonceptCrew will not remain disconnected. In upcoming releases, we could build a repository and a much more community-driven, centralized system between users:",
@@ -203,7 +187,7 @@ const translations = {
 
 export default function LandingPage({ onClose, isLightTheme }: LandingPageProps) {
   const [lang, setLang] = useState<"fr" | "en">("fr");
-  const [installTab, setInstallTab] = useState<"local" | "cloud" | "hybrid">("local");
+  const [installTab, setInstallTab] = useState<"local" | "online">("local");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const t = translations[lang];
 
@@ -642,23 +626,15 @@ export default function LandingPage({ onClose, isLightTheme }: LandingPageProps)
                   installTab === "local" ? "text-indigo-500 border-indigo-500" : "text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300"
                 }`}
               >
-                💻 Local Dev
+                💻 {lang === "fr" ? "Installation Locale" : "Local Setup"}
               </button>
               <button
-                onClick={() => setInstallTab("cloud")}
+                onClick={() => setInstallTab("online")}
                 className={`px-4 py-2 text-xs md:text-sm font-bold rounded-t-lg transition border-b-2 ${
-                  installTab === "cloud" ? "text-indigo-500 border-indigo-500" : "text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300"
+                  installTab === "online" ? "text-indigo-500 border-indigo-500" : "text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300"
                 }`}
               >
-                🚀 Cloud Node
-              </button>
-              <button
-                onClick={() => setInstallTab("hybrid")}
-                className={`px-4 py-2 text-xs md:text-sm font-bold rounded-t-lg transition border-b-2 ${
-                  installTab === "hybrid" ? "text-indigo-500 border-indigo-500" : "text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300"
-                }`}
-              >
-                🕸️ Hybride
+                🌐 {lang === "fr" ? "Version En Ligne" : "Online Version"}
               </button>
             </div>
 
@@ -713,13 +689,13 @@ export default function LandingPage({ onClose, isLightTheme }: LandingPageProps)
               </div>
             </div>
 
-            <div className={`space-y-4 animate-fade-in ${installTab === "cloud" ? "block" : "hidden"}`}>
-               <div className={`p-5 border rounded-2xl ${isLightTheme ? "bg-slate-50" : "bg-slate-800/40"}`}>
+            <div className={`space-y-4 animate-fade-in ${installTab === "online" ? "block" : "hidden"}`}>
+              <div className={`p-5 border rounded-2xl ${isLightTheme ? "bg-slate-50" : "bg-slate-800/40"}`}>
                 <div className="flex gap-4">
                   <div className="text-xl font-black text-indigo-500/50">1</div>
                   <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.cloudStep1Title}</h4>
-                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.cloudStep1Desc}</p>
+                    <h4 className="text-sm font-bold mb-1">{t.onlineStep1Title}</h4>
+                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.onlineStep1Desc}</p>
                   </div>
                 </div>
               </div>
@@ -727,8 +703,8 @@ export default function LandingPage({ onClose, isLightTheme }: LandingPageProps)
                 <div className="flex gap-4">
                   <div className="text-xl font-black text-indigo-500/50">2</div>
                   <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.cloudStep2Title}</h4>
-                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.cloudStep2Desc}</p>
+                    <h4 className="text-sm font-bold mb-1">{t.onlineStep2Title}</h4>
+                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.onlineStep2Desc}</p>
                   </div>
                 </div>
               </div>
@@ -736,54 +712,11 @@ export default function LandingPage({ onClose, isLightTheme }: LandingPageProps)
                 <div className="flex gap-4">
                   <div className="text-xl font-black text-indigo-500/50">3</div>
                   <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.cloudStep3Title}</h4>
-                    <p className={`text-xs mb-3 ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.cloudStep3Desc}</p>
-                    <div className="bg-slate-900 text-slate-300 font-mono text-xs p-3 rounded-lg">
-                      <div>🔧 Build Command: npm run build</div>
-                      <div className="mt-1">🚀 Start Command: npm run start</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className={`p-5 border rounded-2xl ${isLightTheme ? "bg-slate-50" : "bg-slate-800/40"}`}>
-                <div className="flex gap-4">
-                  <div className="text-xl font-black text-indigo-500/50">4</div>
-                  <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.cloudStep4Title}</h4>
-                    <p className={`text-xs mb-3 ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.cloudStep4Desc}</p>
-                    <div className="relative group">
-                      <div className="bg-slate-900 text-slate-300 font-mono text-xs p-3 rounded-lg overflow-x-auto">Key: GEMINI_API_KEY  |  Value: [Votre_Cle_API_AI_Studio]</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className={`space-y-4 animate-fade-in ${installTab === "hybrid" ? "block" : "hidden"}`}>
-              <div className={`p-5 border rounded-2xl ${isLightTheme ? "bg-slate-50" : "bg-slate-800/40"}`}>
-                <div className="flex gap-4">
-                  <div className="text-xl font-black text-indigo-500/50">1</div>
-                  <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.hybridStep1Title}</h4>
-                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.hybridStep1Desc}</p>
-                  </div>
-                </div>
-              </div>
-              <div className={`p-5 border rounded-2xl ${isLightTheme ? "bg-slate-50" : "bg-slate-800/40"}`}>
-                <div className="flex gap-4">
-                  <div className="text-xl font-black text-indigo-500/50">2</div>
-                  <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.hybridStep2Title}</h4>
-                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.hybridStep2Desc}</p>
-                  </div>
-                </div>
-              </div>
-              <div className={`p-5 border rounded-2xl ${isLightTheme ? "bg-slate-50" : "bg-slate-800/40"}`}>
-                <div className="flex gap-4">
-                  <div className="text-xl font-black text-indigo-500/50">3</div>
-                  <div className="w-full">
-                    <h4 className="text-sm font-bold mb-1">{t.hybridStep3Title}</h4>
-                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.hybridStep3Desc}</p>
+                    <h4 className="text-sm font-bold mb-1">{t.onlineStep3Title}</h4>
+                    <p className={`text-xs ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>{t.onlineStep3Desc}</p>
+                    <a href="https://konceptcrew-byalexkoncept.netlify.app/" target="_blank" rel="noopener noreferrer" className="inline-block mt-3 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 text-xs font-bold rounded-lg transition">
+                      Ouvrir la Demo {lang === "en" ? "App" : ""}
+                    </a>
                   </div>
                 </div>
               </div>
