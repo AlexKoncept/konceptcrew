@@ -33,7 +33,7 @@ export default function App() {
   // Layout presentation states
   const [isCreationPanelOpen, setIsCreationPanelOpen] = useState(true); // Studio de Création open by default like mock
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
-  const [isLightTheme, setIsLightTheme] = useState(false); // Default to gorgeous cosmic Dark Mode
+  const [isLightTheme, setIsLightTheme] = useState(true); // Default to Light Theme on first load
   const [textScale, setTextScale] = useState<"normal" | "large" | "extra">("normal");
 
   // Load state from local storage on mount
@@ -117,7 +117,8 @@ export default function App() {
         setKnowledgePacks(JSON.parse(storedPacks));
       }
 
-      const storedTheme = localStorage.getItem("konceptcrew_light_theme") === "true";
+      const themeRaw = localStorage.getItem("konceptcrew_light_theme");
+      const storedTheme = themeRaw === null ? true : themeRaw === "true";
       setIsLightTheme(storedTheme);
 
       const storedLang = localStorage.getItem("konceptcrew_language") as "fr" | "en" | null;
