@@ -28,11 +28,12 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_PROFILE);
   const [stats, setStats] = useState<UserStats>(INITIAL_STATS);
   const [knowledgePacks, setKnowledgePacks] = useState<KnowledgePack[]>(DEFAULT_KNOWLEDGE_PACKS);
+  const [language, setLanguage] = useState<"fr" | "en">("fr");
 
   // Layout presentation states
   const [isCreationPanelOpen, setIsCreationPanelOpen] = useState(true); // Studio de Création open by default like mock
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
-  const [isLightTheme, setIsLightTheme] = useState(false); // Default to gorgeous cosmic Dark Mode
+  const [isLightTheme, setIsLightTheme] = useState(true); // Default to Light Theme on first load
   const [textScale, setTextScale] = useState<"normal" | "large" | "extra">("normal");
 
   // Load state from local storage on mount
@@ -116,8 +117,14 @@ export default function App() {
         setKnowledgePacks(JSON.parse(storedPacks));
       }
 
-      const storedTheme = localStorage.getItem("konceptcrew_light_theme") === "true";
+      const themeRaw = localStorage.getItem("konceptcrew_light_theme");
+      const storedTheme = themeRaw === null ? true : themeRaw === "true";
       setIsLightTheme(storedTheme);
+
+      const storedLang = localStorage.getItem("konceptcrew_language") as "fr" | "en" | null;
+      if (storedLang) {
+        setLanguage(storedLang);
+      }
     } catch (e) {
       console.error("Local Storage parsing failed:", e);
     }
@@ -132,6 +139,16 @@ export default function App() {
   const saveConversationsToLocal = (newConvs: Record<string, Message[]>) => {
     setConversations(newConvs);
     localStorage.setItem("konceptcrew_conversations", JSON.stringify(newConvs));
+  };
+
+  const handleUpdateLanguage = (lang: "fr" | "en") => {
+    setLanguage(lang);
+    localStorage.setItem("konceptcrew_language", lang);
+  };
+
+  const handleUpdateKnowledgePacks = (newPacks: KnowledgePack[]) => {
+    setKnowledgePacks(newPacks);
+    localStorage.setItem("konceptcrew_knowledge_packs", JSON.stringify(newPacks));
   };
 
   const handleUpdateProfile = (nextProfile: UserProfile) => {
@@ -288,7 +305,6 @@ export default function App() {
 
   const handleAddNewCrew = () => {
     setEditingPersona(null);
-    setActiveTab("chat");
     setIsCreationPanelOpen(true);
   };
 
@@ -359,6 +375,7 @@ export default function App() {
         onAddNewCrew={handleAddNewCrew}
         userProfile={userProfile}
         isLightTheme={isLightTheme}
+        language={language}
       />
 
       {/* 2. Central Central Workspace according to Active view tab router */}
@@ -373,10 +390,12 @@ export default function App() {
             onClearHistory={handleClearHistory}
             isLightTheme={isLightTheme}
             knownPacks={knowledgePacks}
+            onUpdateKnowledgePacks={handleUpdateKnowledgePacks}
             userProfile={userProfile}
             onTriggerFactDiscovery={handleTriggerFactDiscovery}
             onOpenLandingPage={() => setIsLandingPageOpen(true)}
             onUpdateMessageImage={handleUpdateMessageImage}
+            language={language}
           />
         )}
 
@@ -387,6 +406,7 @@ export default function App() {
             availableTemplates={DEFAULT_PERSONAS}
             addedPersonaIds={personas.map(p => p.id)}
             isLightTheme={isLightTheme}
+            language={language}
           />
         )}
 
@@ -395,6 +415,7 @@ export default function App() {
             userProfile={userProfile}
             onUpdateProfile={handleUpdateProfile}
             isLightTheme={isLightTheme}
+            language={language}
           />
         )}
 
@@ -404,6 +425,7 @@ export default function App() {
             userProfile={userProfile}
             onUpdateBudgetLimit={handleUpdateBudgetLimit}
             isLightTheme={isLightTheme}
+            language={language}
           />
         )}
 
@@ -417,6 +439,8 @@ export default function App() {
             onClearAllCache={handleClearAllCache}
             textScale={textScale}
             setTextScale={setTextScale}
+            language={language}
+            onUpdateLanguage={handleUpdateLanguage}
           />
         )}
       </main>
@@ -432,11 +456,10 @@ export default function App() {
       )}
 
       {/* Toggle button float to reveal Studio Panel of Creation if hidden */}
-      {(!isCreationPanelOpen || activeTab !== "chat") && (
+      {!isCreationPanelOpen && activeTab === "chat" && (
         <button
           id="btn-floating-studio-creation"
           onClick={() => {
-            setActiveTab("chat");
             const currentSelected = personas.find(p => p.id === selectedPersonaId);
             if (currentSelected) setEditingPersona(currentSelected);
             setIsCreationPanelOpen(true);
