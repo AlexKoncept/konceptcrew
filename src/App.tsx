@@ -303,8 +303,9 @@ export default function App() {
     });
   };
 
-  const handleAddNewCrew = () => {
+const handleAddNewCrew = () => {
     setEditingPersona(null);
+    setActiveTab("chat"); // <- Ligne ajoutée ici
     setIsCreationPanelOpen(true);
   };
 
@@ -456,10 +457,11 @@ export default function App() {
       )}
 
       {/* Toggle button float to reveal Studio Panel of Creation if hidden */}
-      {!isCreationPanelOpen && activeTab === "chat" && (
+     {(!isCreationPanelOpen || activeTab !== "chat") && (
         <button
           id="btn-floating-studio-creation"
           onClick={() => {
+            setActiveTab("chat"); // <- Ligne ajoutée ici
             const currentSelected = personas.find(p => p.id === selectedPersonaId);
             if (currentSelected) setEditingPersona(currentSelected);
             setIsCreationPanelOpen(true);
