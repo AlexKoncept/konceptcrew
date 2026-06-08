@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { Persona, Message, KnowledgePack, UserProfile } from "../types";
 import { KonceptCrewAPI } from "../services/api";
-import { getTranslation, Language } from "../services/i18n";
 import { motion, AnimatePresence } from "motion/react";
 
 interface ChatContainerProps {
@@ -39,12 +38,10 @@ interface ChatContainerProps {
   onClearHistory: () => void;
   isLightTheme: boolean;
   knownPacks: KnowledgePack[];
-  onUpdateKnowledgePacks: (packs: KnowledgePack[]) => void;
   userProfile: UserProfile;
   onTriggerFactDiscovery: (fact: string) => void;
   onOpenLandingPage?: () => void;
   onUpdateMessageImage: (msgId: string, imageUrl: string) => void;
-  language: Language;
 }
 
 export default function ChatContainer({
@@ -55,53 +52,14 @@ export default function ChatContainer({
   onClearHistory,
   isLightTheme,
   knownPacks,
-  onUpdateKnowledgePacks,
   userProfile,
   onTriggerFactDiscovery,
   onOpenLandingPage,
   onUpdateMessageImage,
-  language,
 }: ChatContainerProps) {
-  const t = getTranslation(language);
   const [inputText, setInputText] = useState("");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [streamingText, setStreamingText] = useState<string | null>(null);
-
-  const localFileRef = useRef<HTMLInputElement>(null);
-
-  const handleLocalDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const textContent = event.target?.result as string;
-      const fileSizeString = (file.size / 1024).toFixed(1) + " KB";
-      
-      const newDoc = {
-        id: `doc-${Date.now()}-${Math.random().toString(36).substring(5)}`,
-        fileName: file.name,
-        fileSize: fileSizeString,
-        contentSummary: textContent.substring(0, 150) + "...",
-        uploadDate: new Date().toISOString().split("T")[0],
-        content: textContent,
-      };
-
-      const newPack: KnowledgePack = {
-        id: `kp-${Date.now()}`,
-        name: file.name.split(".")[0],
-        description: language === "fr" ? `Import local du fichier ${file.name}` : `Local import of file ${file.name}`,
-        tags: ["Local", "Import"],
-        documents: [newDoc]
-      };
-
-      onUpdateKnowledgePacks([...knownPacks, newPack]);
-      setConnectedPackIds(prev => [...prev, newPack.id]);
-    };
-    
-    reader.readAsText(file);
-  };
   
   // Custom states for visual generations on-the-fly
   const [generatingForMsgId, setGeneratingForMsgId] = useState<string | null>(null);
@@ -187,7 +145,6 @@ export default function ChatContainer({
     const userMsg = inputText;
     setInputText("");
     setIsSending(true);
-    setStreamingText(""); // Initialize streaming text to empty string
 
     // Save attached attributes
     const activeImage = imageAttached;
@@ -203,35 +160,26 @@ export default function ChatContainer({
         content: m.content
       }));
 
-      // Enrich query if knowledge pack is active - inject real file content!
+      // Enrich query if knowledge pack is active
       let enrichedPrompt = userMsg;
       if (connectedPackIds.length > 0) {
         const connectedText = connectedPackIds.map(id => {
           const pack = knownPacks.find(p => p.id === id);
           if (!pack) return "";
-          const docContents = pack.documents.map(d => {
-            if (d.content) {
-              return `--- Début de Fichier: ${d.fileName} ---\n${d.content}\n--- Fin de Fichier: ${d.fileName} ---`;
-            } else {
-              return `--- Début de Fichier: ${d.fileName} ---\nRésumé de connaissance: ${d.contentSummary}\n--- Fin de Fichier: ${d.fileName} ---`;
-            }
-          }).join("\n\n");
-          return `[Documentation Pack Connecté: ${pack.name} - ${pack.description}]\n${docContents}`;
-        }).join("\n\n");
-        
-        enrichedPrompt = `${connectedText}\n\nQuestion utilisateur : ${userMsg}`;
+          const fileDetails = pack.documents.map(d => {
+            return `- Fichier: ${d.fileName} (${d.fileSize})\n  Contenu/Résumé de référence: ${d.contentSummary}`;
+          }).join("\n");
+          return `[ESPACE DE CONNAISSANCES CONNECTÉ : "${pack.name}"]\nDescription générale: ${pack.description}\n\nFichiers disponibles et extraits de référence :\n${fileDetails}\n[FIN DE L'ESPACE DE CONNAISSANCES]`;
+        }).filter(Boolean).join("\n\n");
+        enrichedPrompt = `${connectedText}\n\nEn te basant rigoureusement sur les fiches techniques et fiches d'organisation de ressources ci-dessus pour guider et adapter ton expertise, réponds de façon ultra-documentée à la demande de l'utilisateur :\n${userMsg}`;
       }
 
-      let citationsResult: any[] | undefined = undefined;
-      const response = await KonceptCrewAPI.sendChatMessageStream(persona, {
+      const response = await KonceptCrewAPI.sendChatMessage(persona, {
         prompt: enrichedPrompt,
         history: chatHistory,
         webSearch: webSearchEnabled,
         imageAttachment: activeImage || undefined,
         imageMimeType: activeImage ? "image/png" : undefined
-      }, (chunkText, citations) => {
-        setStreamingText(chunkText);
-        if (citations) citationsResult = citations;
       });
 
       // Analyze if any new memory facts have been discovered automatic
@@ -250,12 +198,10 @@ export default function ChatContainer({
         }
       }
 
-      // Save final message to App history
-      onSendMessage(response.text, autoImageUrl, citationsResult || response.citations);
+      onSendMessage(response.text, autoImageUrl, response.citations);
     } catch (e: any) {
       onSendMessage(`*(Échec de connexion : ${e.message || "Erreur réseau"}. Basculement automatique sur l'intelligence locale en cours).*`, undefined);
     } finally {
-      setStreamingText(null); // Reset streaming state
       setIsSending(false);
     }
   };
@@ -370,9 +316,9 @@ export default function ChatContainer({
                 : "bg-[#18233e] text-slate-300 hover:bg-[#202e50]"
             }`}
           >
-            <span>{t.docsRag}</span>
+            <span>Docs & RAG</span>
             <span className="w-5 h-5 rounded-full bg-pink-500 text-white font-black text-[10px] flex items-center justify-center shadow-xs">
-              {connectedPackIds.length}
+              {connectedPackIds.length || 3}
             </span>
           </button>
 
@@ -386,7 +332,7 @@ export default function ChatContainer({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-200 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-300"></span>
             </span>
-            <span>{t.vocalLive}</span>
+            <span>Mode Vocal Live</span>
           </button>
 
           {/* Export Report action button */}
@@ -398,10 +344,10 @@ export default function ChatContainer({
                 ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-250" 
                 : "bg-[#161c2c] text-emerald-400 hover:bg-emerald-500/20"
             }`}
-            title={t.rapportTooltip}
+            title="Exporter la conversation en format Markdown d'expert"
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t.rapport}</span>
+            <span className="hidden sm:inline">Rapport</span>
           </button>
 
           {/* Quick Clear Button */}
@@ -411,7 +357,7 @@ export default function ChatContainer({
             className={`p-2 rounded-xl transition ${
               isLightTheme ? "hover:bg-slate-100 text-slate-500" : "hover:bg-[#18233e] text-slate-400"
             }`}
-            title={t.effacerChat}
+            title="Effacer la conversation"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -430,29 +376,11 @@ export default function ChatContainer({
             }`}
           >
             <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex flex-col">
-                  <span className="font-bold text-xs uppercase tracking-wider text-slate-400">
-                    {t.ragTitle}
-                  </span>
-                  <span className="text-[10px] text-indigo-400">{t.ragSub}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    ref={localFileRef}
-                    onChange={handleLocalDocUpload}
-                    accept=".txt,.md,.json,.csv,.js,.ts,.html,.css"
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => localFileRef.current?.click()}
-                    className="text-[10.5px] font-black bg-gradient-to-tr from-[#5969F3] to-[#ec4899] hover:opacity-95 text-white px-3 py-1.5 rounded-xl transition shadow-xs"
-                    title={t.ragImportHelp}
-                  >
-                    {t.ragImportBtn}
-                  </button>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs uppercase tracking-wider text-slate-400">
+                  Connecter des Packs de Connaissances locaux (RAG)
+                </span>
+                <span className="text-[10px] text-indigo-400">Les documents seront injectés sémantiquement à Gemini</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {knownPacks.map((pack) => {
@@ -519,15 +447,15 @@ export default function ChatContainer({
                   referrerPolicy="no-referrer"
                 />
                 <div>
-                  <h3 className="font-extrabold text-white text-base leading-tight">{t.sessionOrale}: {persona.name}</h3>
+                  <h3 className="font-extrabold text-white text-base leading-tight">Session Orale: {persona.name}</h3>
                   <p className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    {t.connexionEtablie}
+                    Connexion audio sécurisée établie (Qualité HD)
                   </p>
                 </div>
               </div>
               <div className="bg-[#18233e] text-[11px] text-cyan-400 font-bold font-mono px-3 py-1.5 rounded-full border border-cyan-500/20">
-                {t.tempsEcoule}: {formatTimer(speechTimer)}
+                Temps écoulé: {formatTimer(speechTimer)}
               </div>
             </div>
 
@@ -539,7 +467,7 @@ export default function ChatContainer({
                 <div className={`p-6 rounded-2xl flex flex-col items-center justify-center transition ${
                   isSpeakActive ? "bg-cyan-500/5 border border-cyan-500/20" : "bg-[#0b101c]/40 border border-transparent"
                 }`}>
-                  <span className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-3">{t.vousParlez}</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-3">Vous parlez</span>
                   
                   {/* Dynamic looping particle user wave */}
                   <div className="h-28 flex items-center justify-center gap-1.5 w-full max-w-xs relative">
@@ -557,7 +485,7 @@ export default function ChatContainer({
                       />
                     ))}
                     {isMuted && (
-                      <span className="absolute text-xs text-rose-500 font-bold bg-rose-500/10 px-3 py-1 rounded border border-rose-500/20">{t.microSourdine}</span>
+                      <span className="absolute text-xs text-rose-500 font-bold bg-rose-500/10 px-3 py-1 rounded border border-rose-500/20">MICRO SOURDINE</span>
                     )}
                   </div>
                   
@@ -570,7 +498,7 @@ export default function ChatContainer({
                 <div className={`p-6 rounded-2xl flex flex-col items-center justify-center transition ${
                   !isSpeakActive ? "bg-pink-500/5 border border-pink-500/20" : "bg-[#0b101c]/40 border border-transparent"
                 }`}>
-                  <span className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-3">{persona.name} {t.iaParle}</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-3">{persona.name} parle</span>
                   
                   {/* Dynamic looping particle AI wave */}
                   <div className="h-28 flex items-center justify-center gap-1.5 w-full max-w-xs">
@@ -604,7 +532,7 @@ export default function ChatContainer({
               
               {/* Hands-Free indicator */}
               <div className="flex flex-col gap-1 px-2 border-r border-[#1e293b]/50">
-                <span className="text-[10px] text-slate-500 uppercase font-bold">{language === "fr" ? "Options d'écoute" : "Listening Options"}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Options d'écoute</span>
                 <button
                   type="button"
                   onClick={() => setIsHandsFree(!isHandsFree)}
@@ -612,14 +540,14 @@ export default function ChatContainer({
                     isHandsFree ? "text-cyan-400" : "text-slate-400"
                   }`}
                 >
-                  {isHandsFree ? t.mainsLibres : t.ptt}
+                  {isHandsFree ? "● Mains Libres" : "Appuyer pour parler (PTT)"}
                 </button>
               </div>
 
               {/* Volume scale */}
               <div className="flex flex-col gap-1 px-2 border-r border-[#1e293b]/50">
                 <div className="flex items-center justify-between text-[10px] text-slate-500 uppercase font-bold">
-                  <span>{t.volumeEmission}</span>
+                  <span>Volume Émission</span>
                   <span className="text-white">{speechVolume}%</span>
                 </div>
                 <input
@@ -634,13 +562,13 @@ export default function ChatContainer({
 
               {/* Sensitivity detection */}
               <div className="flex flex-col gap-1 px-2 border-r border-[#1e293b]/50">
-                <span className="text-[10px] text-slate-500 uppercase font-bold">{t.seuilVAD}</span>
-                <span className="text-xs font-bold text-white">{t.vadDetail}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Seuil Réactivité (VAD)</span>
+                <span className="text-xs font-bold text-white">Très réactif (Double sens)</span>
               </div>
 
               {/* Active Voice preset */}
               <div className="flex flex-col gap-1 px-2">
-                <span className="text-[10px] text-slate-500 uppercase font-bold">{t.voixSelectionnee}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Voix Sélectionnée</span>
                 <span className="text-xs font-bold text-indigo-400">{persona.voice} (Gemini)</span>
               </div>
 
@@ -654,7 +582,7 @@ export default function ChatContainer({
                 className={`p-4 rounded-full transition ${
                   isMuted ? "bg-rose-600 text-white" : "bg-[#161f38] text-slate-300 hover:bg-[#202e52]"
                 }`}
-                title={isMuted ? (language === "fr" ? "Activer le microphone" : "Unmute microphone") : (language === "fr" ? "Désactiver le microphone" : "Mute microphone")}
+                title={isMuted ? "Activer le microphone" : "Désactiver le microphone"}
               >
                 {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
@@ -666,7 +594,7 @@ export default function ChatContainer({
                 className="bg-rose-500 hover:bg-rose-600 text-white font-extrabold px-8 py-3.5 rounded-full flex items-center gap-2.5 shadow-lg shadow-rose-500/15 transition-all duration-300"
               >
                 <PhoneOff className="w-5 h-5" />
-                <span>{t.raccrocher}</span>
+                <span>Raccrocher la session</span>
               </button>
 
               <div className="p-4 rounded-full bg-[#161f38] text-slate-300">
@@ -691,26 +619,21 @@ export default function ChatContainer({
             </div>
             <div className="space-y-1.5 max-w-sm">
               <h3 className={`text-base font-bold ${isLightTheme ? "text-slate-900" : "text-white"}`}>
-                {t.commencerEchange} {persona.name}
+                Commencez à échanger avec {persona.name}
               </h3>
               <p className="text-xs text-slate-400 leading-normal">
-                {t.aideWelcome}
+                Expliquez votre concept, uploadez vos schémas/images ou connectez un Pack de Connaissances. L'IA s'ajuste en continu à votre profil.
               </p>
             </div>
             
             {/* Template starter chips */}
             <div className="grid grid-cols-2 gap-2 max-w-md pt-3">
-              {(language === "fr" ? [
+              {[
                 "Peux-tu m'expliquer simplement le théorème de Pythagore ?",
                 "Quels sont les points clés de lubrification sur l'ETA 2824-2 ?",
                 "Quelle section de cable brancher de mon panneau solaire MPPT ?",
                 "Propose-moi un entrainement de force ciblé haut du corps"
-              ] : [
-                "Can you explain the Pythagorean theorem simply?",
-                "What are the key lubrication points on the ETA 2824-2?",
-                "What cable size should I connect to my solar MPPT charger?",
-                "Suggest a target upper body strength workout"
-              ]).map((starter, i) => (
+              ].map((starter, i) => (
                 <button
                   key={i}
                   onClick={() => setInputText(starter)}
@@ -845,38 +768,22 @@ export default function ChatContainer({
             })}
 
             {isSending && (
-              <div className="flex gap-3 max-w-[85%] mr-auto">
+              <div className="flex gap-3 max-w-[80%] mr-auto">
                 <img
                   src={persona.avatar}
                   alt={persona.name}
-                  className="w-9 h-9 rounded-full object-cover border border-slate-700 flex-shrink-0"
+                  className="w-9 h-9 rounded-full object-cover border border-slate-700 flex-shrink-0 animate-pulse"
                   referrerPolicy="no-referrer"
                 />
-                <div className="space-y-1.5 w-full">
-                  <span className="text-[10px] text-slate-500 font-bold block ml-1">
-                    {persona.name} • {language === "fr" ? "En rédaction" : "Typing"}
-                  </span>
-                  <div className={`p-3.5 rounded-2xl relative border ${
-                    isLightTheme
-                      ? "bg-white border-slate-200 text-slate-800 rounded-tl-none"
-                      : "bg-[#0f1524] border-[#1e293b] text-slate-200 rounded-tl-none shadow"
-                  }`}>
-                    {streamingText ? (
-                      <p className="text-xs whitespace-pre-wrap leading-relaxed select-text font-sans">
-                        {streamingText}
-                      </p>
-                    ) : (
-                      <div className="flex items-center gap-3 text-xs text-slate-400">
-                        <div className="flex items-center gap-1 bg-[#1e293b]/70 py-1 px-2 rounded-full">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-[bounce_1s_infinite_100ms] block" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-[bounce_1s_infinite_300ms] block" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-[bounce_1s_infinite_500ms] block" />
-                        </div>
-                        <span className="animate-pulse font-semibold text-slate-300">
-                          {t.creationReponse}
-                        </span>
-                      </div>
-                    )}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-slate-500 font-bold block ml-1">{persona.name} est en train de rédiger...</span>
+                  <div className="p-3.5 rounded-xl bg-[#0f1524] border border-[#1e293b] text-xs text-slate-400 flex items-center gap-3">
+                    <div className="flex items-center gap-1 bg-[#1e293b]/70 py-1.5 px-2.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-[bounce_1s_infinite_100ms] block" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-[bounce_1s_infinite_300ms] block" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-[bounce_1s_infinite_500ms] block" />
+                    </div>
+                    <span className="animate-pulse text-xs font-semibold text-slate-300">Création de la réponse d'élite...</span>
                   </div>
                 </div>
               </div>
@@ -972,7 +879,7 @@ export default function ChatContainer({
 
           {/* Right: AI listening status waves */}
           <div className="flex flex-col items-center flex-1">
-            <span className="text-[10px] text-[#7d51f7] font-extrabold uppercase tracking-widest mb-1.5 label-vocal">{persona.name} {language === "fr" ? "écoute" : "listens"}</span>
+            <span className="text-[10px] text-[#7d51f7] font-extrabold uppercase tracking-widest mb-1.5 label-vocal">{persona.name} écoute</span>
             <div className="flex items-center gap-2">
               <div className="flex items-end gap-[2px] h-6">
                 {[5, 12, 7, 15, 4, 10, 6, 8, 4].map((h, i) => (
@@ -998,7 +905,7 @@ export default function ChatContainer({
             id="btn-voice-end-call-pill"
             onClick={() => setIsVocalCallActive(false)}
             className="absolute top-2 right-2 text-slate-400 hover:text-rose-500 bg-slate-50 hover:bg-slate-100 p-1 rounded-full border border-slate-100 transition text-[10px] font-bold"
-            title={language === "fr" ? "Masquer la session vocale" : "Hide voice session"}
+            title="Masquer la session vocale"
           >
             ×
           </button>
@@ -1021,7 +928,7 @@ export default function ChatContainer({
                   ? "border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800" 
                   : "border-[#1e293b] hover:bg-[#18233d] text-slate-400 hover:text-white"
               }`}
-              title={t.ragImportHelp}
+              title="Associer des documents pour le RAG"
             >
               <Paperclip className="w-4.5 h-4.5" />
             </button>
@@ -1041,7 +948,7 @@ export default function ChatContainer({
                   ? "border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800" 
                   : "border-[#1e293b] hover:bg-[#18233d] text-slate-400 hover:text-white"
               }`}
-              title={language === "fr" ? "Uploader une illustration/schéma (Analyse de Vision)" : "Upload illustration/diagram (Vision Analysis)"}
+              title="Uploader une illustration/schéma (Analyse de Vision)"
             >
               <Eye className="w-4.5 h-4.5" />
             </button>
@@ -1060,7 +967,7 @@ export default function ChatContainer({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t.entrerMessage}
+              placeholder={`Écrivez à ton spécialiste ${persona.name}...`}
               rows={1}
               className={`w-full border focus:outline-none rounded-xl py-3 pl-3 pr-16 text-xs resize-none max-h-32 font-sans scrollbar-none leading-relaxed transition ${
                 isLightTheme 
@@ -1077,7 +984,7 @@ export default function ChatContainer({
                   ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40" 
                   : isLightTheme ? "text-slate-400 hover:text-slate-800 hover:bg-slate-100" : "text-slate-500 hover:text-white hover:bg-slate-800"
               }`}
-              title={language === "fr" ? "Activer la recherche Google en ligne (Gemini Grounding)" : "Enable online Google Search (Gemini Grounding)"}
+              title="Activer la recherche Google en ligne (Gemini Grounding)"
             >
               <Globe className="w-3.5 h-3.5" />
             </button>
@@ -1095,15 +1002,9 @@ export default function ChatContainer({
         </div>
 
         <div className="flex items-center justify-between text-[10px] text-slate-500 mt-2 px-1">
-          <span>
-            {language === "fr" ? (
-              <>Raccourcis: <kbd className="bg-slate-800 px-1 rounded text-[9px]">Entrée</kbd> pour envoyer, <kbd className="bg-slate-800 px-1 rounded text-[9px]">Shift+Entrée</kbd> pour saut de ligne</>
-            ) : (
-              <>Shortcuts: <kbd className="bg-slate-800 px-1 rounded text-[9px]">Enter</kbd> to send, <kbd className="bg-slate-800 px-1 rounded text-[9px]">Shift+Enter</kbd> for new line</>
-            )}
-          </span>
+          <span>Raccourcis: <kbd className="bg-slate-800 px-1 rounded text-[9px]">Entrée</kbd> pour envoyer, <kbd className="bg-slate-800 px-1 rounded text-[9px]">Shift+Entrée</kbd> pour saut de ligne</span>
           <span className="flex items-center gap-1.5 flex-wrap">
-            <span>{language === "fr" ? "Indexé par stockage Local-First sécurisé" : "Indexed by secure Local-First storage"}</span>
+            <span>Indexé par stockage Local-First sécurisé</span>
             {onOpenLandingPage && (
               <>
                 <span>•</span>
@@ -1113,7 +1014,7 @@ export default function ChatContainer({
                   className="text-[#a855f7] hover:text-[#ec4899] font-extrabold hover:underline transition cursor-pointer flex items-center gap-0.5"
                   id="btn-trigger-landing"
                 >
-                  {language === "fr" ? "Découvrir l'Histoire & Vision 🔮" : "Discover Story & Vision 🔮"}
+                  Découvrir l'Histoire & Vision 🔮
                 </button>
               </>
             )}
