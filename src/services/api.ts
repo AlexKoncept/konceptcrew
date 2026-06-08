@@ -48,8 +48,84 @@ export class KonceptCrewAPI {
   static async sendChatMessage(persona: Persona, params: ChatRequestParams): Promise<ChatResponse> {
     const isOffline = this.isOfflineMode();
     const localKeys = this.getLocalApiKey();
-    
-    // Simulate real Local Ollama or LM Studio offline response
+    const provider = persona.engine.provider;
+
+    // Check if the provider is a live local engine (Ollama or LM Studio)
+    const isLocalProvider = provider === "Ollama" || provider === "LM Studio";
+
+    if (isLocalProvider && !isOffline) {
+      try {
+        const localEndpoint = provider === "Ollama"
+          ? (localStorage.getItem("konceptcrew_ollama_url") || "http://localhost:11434")
+          : (localStorage.getItem("konceptcrew_lmstudio_url") || "http://localhost:1234");
+        
+        const url = `${localEndpoint.replace(/\/$/, "")}/v1/chat/completions`;
+        const model = persona.engine.model || (provider === "Ollama" ? "llama3" : "meta-llama-3-8b-instruct");
+
+        // Format history according to typical OpenAI-compatible completions format
+        const messagesToSend = [
+          { role: "system", content: persona.systemPrompt }
+        ];
+
+        if (params.history && params.history.length > 0) {
+          params.history.forEach(h => {
+            messagesToSend.push({
+              role: h.role === "assistant" ? "assistant" : "user",
+              content: h.content
+            });
+          });
+        }
+
+        messagesToSend.push({
+          role: "user",
+          content: params.prompt || ""
+        });
+
+        // Trigger safe fetch with timeout to avoid hanging UI
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: messagesToSend,
+            temperature: persona.temperature || 1.0,
+            max_tokens: persona.maxTokens || 2048,
+            stream: false
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`Erreur serveur local (${response.status})`);
+        }
+
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content || "";
+        
+        return {
+          text,
+          citations: [],
+          modelUsed: `${provider} (${model})`,
+          cost: {
+            promptTokens: data.usage?.prompt_tokens || 0,
+            candidatesTokens: data.usage?.completion_tokens || 0,
+            totalTokens: data.usage?.total_tokens || 0,
+          }
+        };
+      } catch (err: any) {
+        console.warn(`Direct local connection info: Could not reach active local ${provider} engine. Using mock simulation instead.`, err);
+        return this.simulateOfflineResponse(persona, params.prompt || "", `Serveur ${provider} local déconnecté ou CORS bloquant. Simulation active.`, params.webSearch);
+      }
+    }
+
+    // Default simulation if running full offline mode
     if (isOffline) {
       return this.simulateOfflineResponse(persona, params.prompt || "", undefined, params.webSearch);
     }
@@ -90,144 +166,6 @@ export class KonceptCrewAPI {
       // Fallback response for perfect preview robustness
       return this.simulateOfflineResponse(persona, params.prompt || "", error.message, params.webSearch);
     }
-  }
-
-  // Stream chat request sender (Server-Sent Events)
-  static async sendChatMessageStream(
-    persona: Persona,
-    params: ChatRequestParams,
-    onChunk: (text: string, citations?: any[], cost?: any) => void
-  ): Promise<ChatResponse> {
-    const isOffline = this.isOfflineMode();
-    const localKeys = this.getLocalApiKey();
-
-    if (isOffline) {
-      return this.simulateOfflineResponseStream(persona, params.prompt || "", onChunk, params.webSearch);
-    }
-
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (localKeys) {
-        headers["x-api-key"] = localKeys;
-      }
-
-      const response = await fetch("/api/crews/chat", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          prompt: params.prompt,
-          systemInstruction: persona.systemPrompt,
-          history: params.history,
-          model: persona.engine.model || "gemini-3.5-flash",
-          temperature: persona.temperature || 1.0,
-          maxTokens: persona.maxTokens,
-          webSearch: params.webSearch,
-          imageAttachment: params.imageAttachment,
-          imageMimeType: params.imageMimeType,
-          stream: true
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Erreur serveur (${response.status})`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
-      if (!reader) {
-        throw new Error("Impossible de lire le flux de réponse.");
-      }
-
-      let fullText = "";
-      let lastCitations: any[] = [];
-      let lastCost: any = null;
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        // Keep the last partial line in the buffer
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const cleanLine = line.trim();
-          if (!cleanLine) continue;
-          if (cleanLine === "data: [DONE]") continue;
-
-          if (cleanLine.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(cleanLine.substring(6));
-              if (data.error) {
-                throw new Error(data.error);
-              }
-              if (data.text) {
-                fullText += data.text;
-              }
-              if (data.citations) {
-                lastCitations = data.citations;
-              }
-              if (data.cost) {
-                lastCost = data.cost;
-              }
-              onChunk(fullText, lastCitations, lastCost);
-            } catch (jsonErr) {
-              // Ignore line parse errors if chunk is split
-            }
-          }
-        }
-      }
-
-      return {
-        text: fullText,
-        citations: lastCitations,
-        modelUsed: persona.engine.model || "gemini-3.5-flash",
-        cost: lastCost || {
-          promptTokens: (params.prompt || "").length * 4,
-          candidatesTokens: fullText.length * 4,
-          totalTokens: ((params.prompt || "").length + fullText.length) * 4,
-        },
-      };
-    } catch (error: any) {
-      console.warn("Stream API Error, falling back to simulated stream response", error);
-      return this.simulateOfflineResponseStream(persona, params.prompt || "", onChunk, params.webSearch);
-    }
-  }
-
-  // Simulated Offline stream responder word-by-word
-  private static simulateOfflineResponseStream(
-    persona: Persona,
-    prompt: string,
-    onChunk: (text: string, citations?: any[], cost?: any) => void,
-    webSearch?: boolean
-  ): Promise<ChatResponse> {
-    return new Promise(async (resolve) => {
-      const fullResponse = await this.simulateOfflineResponse(persona, prompt, undefined, webSearch);
-      const text = fullResponse.text;
-      
-      const words = text.split(/(\s+)/);
-      let currentText = "";
-      let index = 0;
-
-      const interval = setInterval(() => {
-        if (index >= words.length) {
-          clearInterval(interval);
-          resolve(fullResponse);
-          return;
-        }
-
-        currentText += words[index];
-        index++;
-        
-        onChunk(currentText, fullResponse.citations, fullResponse.cost);
-      }, 35);
-    });
   }
 
   // Prompt generation & optimizing
