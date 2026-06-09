@@ -28,17 +28,7 @@ function getGeminiClient(clientApiKey?: string) {
 }
 
 function mapModelName(modelName: string): string {
-  if (!modelName) return "gemini-2.5-flash";
-  const m = modelName.toLowerCase();
-  if (m.includes("3.1-pro")) {
-    return "gemini-2.5-pro";
-  }
-  if (m.includes("3.1-flash-lite")) {
-    return "gemini-2.5-flash";
-  }
-  if (m.includes("3.5-flash") || m.includes("3.1-flash") || m.includes("flash")) {
-    return "gemini-2.5-flash";
-  }
+  if (!modelName) return "gemini-3.5-flash";
   return modelName;
 }
 
