@@ -1,4 +1,3 @@
-import "dotenv/config";
 import express from "express";
 import path from "path";
 import { GoogleGenAI, Type } from "@google/genai";
@@ -28,6 +27,21 @@ function getGeminiClient(clientApiKey?: string) {
   });
 }
 
+function mapModelName(modelName: string): string {
+  if (!modelName) return "gemini-2.5-flash";
+  const m = modelName.toLowerCase();
+  if (m.includes("3.1-pro")) {
+    return "gemini-2.5-pro";
+  }
+  if (m.includes("3.1-flash-lite")) {
+    return "gemini-2.5-flash";
+  }
+  if (m.includes("3.5-flash") || m.includes("3.1-flash") || m.includes("flash")) {
+    return "gemini-2.5-flash";
+  }
+  return modelName;
+}
+
 // ==========================================
 // API ROUTES FIRST
 // ==========================================
@@ -52,8 +66,7 @@ app.post("/api/crews/chat", async (req, res) => {
       maxTokens,
       webSearch = false,
       imageAttachment, // base64 string
-      imageMimeType, // e.g. "image/png"
-      stream = false
+      imageMimeType // e.g. "image/png"
     } = req.body;
 
     const apiKey = req.headers["x-api-key"] as string || undefined;
@@ -108,54 +121,8 @@ app.post("/api/crews/chat", async (req, res) => {
       config.tools = [{ googleSearch: {} }];
     }
 
-    if (stream) {
-      // Set headers for EventStream
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-      res.setHeader("X-Accel-Buffering", "no");
-
-      try {
-        const responseStream = await ai.models.generateContentStream({
-          model: model,
-          contents: contents,
-          config: config
-        });
-
-        for await (const chunk of responseStream) {
-          const chunkText = chunk.text || "";
-          
-          // Try to extract grounding citations if any in this chunk
-          const searchChunks = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-          const citations = searchChunks.map((c: any) => ({
-            title: c.web?.title || "Source",
-            uri: c.web?.uri || "",
-          })).filter((c: any) => c.uri);
-
-          // Try to extract token metrics if available on this chunk (usually final chunk)
-          const cost = chunk.usageMetadata ? {
-            promptTokens: chunk.usageMetadata.promptTokenCount || 0,
-            candidatesTokens: chunk.usageMetadata.candidatesTokenCount || 0,
-            totalTokens: chunk.usageMetadata.totalTokenCount || 0,
-          } : undefined;
-
-          res.write(`data: ${JSON.stringify({ text: chunkText, citations, cost })}\n\n`);
-        }
-
-        res.write(`data: [DONE]\n\n`);
-        res.end();
-        return;
-      } catch (streamError: any) {
-        console.error("Stream generation error:", streamError);
-        res.write(`data: ${JSON.stringify({ error: streamError.message || "Erreur lors du streaming." })}\n\n`);
-        res.end();
-        return;
-      }
-    }
-
-    // Non-streaming fallback
     const response = await ai.models.generateContent({
-      model: model,
+      model: mapModelName(model),
       contents: contents,
       config: config
     });
@@ -170,8 +137,9 @@ app.post("/api/crews/chat", async (req, res) => {
     res.json({
       text: response.text || "",
       citations: citations,
-      modelUsed: model,
+      modelUsed: mapModelName(model),
       cost: {
+        // Mock estimate as per token usage for tracking
         promptTokens: response.usageMetadata?.promptTokenCount || 0,
         candidatesTokens: response.usageMetadata?.candidatesTokenCount || 0,
         totalTokens: response.usageMetadata?.totalTokenCount || 0,
@@ -208,7 +176,7 @@ app.post("/api/crews/prompt-engineer", async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: mapModelName("gemini-3.5-flash"),
       contents: systemPromptLine,
       config: {
         systemInstruction: "Tu es un ingénieur de prompt d'élite (" + action + ") qui génère des prompts systèmes d'une rare précision, en français.",
@@ -236,7 +204,7 @@ Tous les champs doivent être rédigés en français.
 Idées de thèmes possibles: Un herboriste moderne, un guide survie spatial, un critique de mèmes rétro de l'an 2000, un expert de jardinage hydroponique, un conseiller en finances drôle mais rigoureux, un traducteur de comportement félin, etc. Donne vie à un personnage captivant, qualitatif et plein d'humour sérieux.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: mapModelName("gemini-3.5-flash"),
       contents: userInspirationPrompt,
       config: {
         systemInstruction: "Tu es un créateur d'idées de personas IA d'élite. Tu inventes des compagnons d'experts IA inoubliables, drôles, érudits et extrêmement qualifiés.",
@@ -394,7 +362,7 @@ app.post("/api/crews/generate-image", async (req, res) => {
         const ai = getGeminiClient(geminiKey);
         const promptEngineeringQuery = `Analyse l'explication suivante d'un expert IA et rédige un prompt d'image (consigne visuelle) extrêmement précis et détaillé en anglais. Le prompt doit décrire une illustration, un graphique technique, un dessin à main levée, ou une image conceptuelle représentant au mieux le sujet pour aider l'utilisateur à visualiser. Rends-le sous forme d'une simple phrase ou paragraphe en anglais sans fioriture ni introduction ni guillemets. Sujet à illustrer : ${prompt}`;
         const promptResponse = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: mapModelName("gemini-3.5-flash"),
           contents: promptEngineeringQuery,
           config: {
             systemInstruction: "Tu es un spécialiste de l'analyse visuelle et de l'ingénierie de prompt pour générateurs d'images. Ton but est de concevoir un prompt visuel de haute qualité, clair, descriptif et en anglais.",
@@ -492,19 +460,6 @@ app.post("/api/crews/generate-image", async (req, res) => {
 // VITE OR STATIC MIDDLEWARE SETUP
 // ==========================================
 async function startServer() {
-  // Check for Gemini API key on startup and display a friendly console box if missing
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn("\n========================================================================");
-    console.warn("⚠️  [KonceptCrew Warning] Clé GEMINI_API_KEY non détectée !");
-    console.warn("------------------------------------------------------------------------");
-    console.warn("Pour profiter de toute l'intelligence des experts IA en ligne (Gemini),");
-    console.warn("veuillez créer un fichier `.env` à la racine du projet et y ajouter :");
-    console.warn("  GEMINI_API_KEY=votre_clef_api");
-    console.warn("\nEn l'absence de clé, l'application bascule automatiquement sur le");
-    console.warn("simulateur local-first pour vous permettre de la tester instantanément.");
-    console.warn("========================================================================\n");
-  }
-
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
